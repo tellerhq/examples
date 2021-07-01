@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="index.css" rel="stylesheet">
+    <link href="https://rsms.me/inter/inter.css" rel="stylesheet">
+    <link href="https://unpkg.com/tailwindcss@2.1.1/dist/tailwind.min.css" rel="stylesheet">
+
+    <title>Teller Demo</title>
+  </head>
+  <body class="h-screen">
+    <nav class="bg-white shadow">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+          <div class="flex">
+            <div class="flex-shrink-0 flex items-center">
+              <img class="h-8" src="https://cdn.teller.io/web/images/logo-f95c6f1215ddf9d2b4a5c23f3f7ae3a4.svg"/>
+            </div>
+          </div>
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <button type="button" id="teller-connect" class="relative inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Connect
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div id="accounts"></div>
+        <div id="logs"></div>
+      </div>
+    </div>
+    <div class="fixed bottom-0 w-full">
+      <div class="rounded-t-lg max-w-7xl mx-auto p-8 bg-gray-200">
+        <div class="flex flex-row justify-around items-center">
+          <div>
+            User – <span id="user-id" class="font-mono">not_available</span>
+          </div>
+          <div>
+            Access Token – <span id="access-token" class="font-mono">not_available</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <template id="account-template">
+      <div class="account mb-8">
+        <div class="bg-white overflow-hidden shadow rounded-lg divide-y divide-gray-200">
+          <div class="title px-4 py-5 sm:px-6 text-lg"></div>
+          <div class="px-4 py-5 sm:p-6">
+            <span class="institution inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800"></span>
+            <span class="type inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800"></span>
+            <span class="subtype inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800"></span>
+          </div>
+        </div>
+        <div class="flex mt-4">
+          <button type="button" class="details inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 w-full mx-2">
+            Details
+          </button>
+          <button type="button" class="balances inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 w-full">
+            Balances
+          </button>
+          <button type="button" class="transactions inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 w-full mx-2">
+            Transactions
+          </button>
+        </div>
+      </div>
+    </template>
+    <template id="log-template">
+      <div class="log flex justify-between items-center mb-2">
+        <div>
+          <div class="resource text-xl font-semibold"></div>
+          <div class="timestamp text-sm text-gray-400"></div>
+        </div>
+        <div class="http font-mono text-xs text-gray-400"></div>
+      </div>
+    </template>
+    <template id="detail-template">
+      <div class="detail bg-white overflow-hidden shadow rounded-lg mb-6">
+        <div class="flex justify-around px-4 py-3">
+          <div class="flex items-center">
+            <span>Account Number</span>
+            <span class="number ml-2 inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800"></span>
+          </div>
+          <div class="flex items-center">
+            <span>ACH</span>
+            <span class="ach ml-2 inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800"></span>
+          </div>
+        </div>
+      </div>
+    </template>
+    <template id="balance-template">
+      <div class="balance bg-white overflow-hidden shadow rounded-lg mb-6">
+        <div class="flex justify-around px-4 py-3">
+          <div class="flex items-center">
+            <span>Available</span>
+            <span class="available ml-2 inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800"></span>
+          </div>
+          <div class="flex items-center">
+            <span>Ledger</span>
+            <span class="ledger ml-2 inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800"></span>
+          </div>
+        </div>
+      </div>
+    </template>
+    <template id="transaction-template">
+      <div class="transaction mb-3">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="flex items-center px-4 py-3">
+            <div class="flex-grow">
+              <div class="description"></div>
+              <div class="date text-sm text-gray-400"></div>
+            </div>
+            <span class="amount inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800"></span>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <script src="https://cdn.teller.io/connect/connect.js"></script>
+    <script src="index.js"></script>
+  </body>
+</html>
