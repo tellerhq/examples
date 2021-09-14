@@ -6,7 +6,7 @@ This repository contains a small web front-end that allows easy interaction with
 
 ## Set-Up
 
-The only general dependency for the project is `python` version `3+`. Go ahead and clone the repository on your local machine. Based on the language you want to use for your back-end, visit the language's folder `README.md` for further instructions. Once the back-end is running locally, proceed to starting the static file server for the front-end application. Open the `static/index.js` file and fill the value associated to the `APPLICATION_ID` constant which appears at the top of the file with your Teller application's ID. If you are not sure what it is, visit [this page](https://teller.io/settings/application) to find it. Save the file then run: 
+The only general dependency for the project is `python` version `3+`. Go ahead and clone the repository on your local machine. Based on the language you want to use for your back-end, visit the language's folder `README.md` for further instructions. Once the back-end is running locally, proceed to starting the static file server for the front-end application. Open the `static/index.js` file and fill the value associated to the `APPLICATION_ID` constant which appears at the top of the file with your Teller application's ID. If you are not sure what it is, visit [this page](https://teller.io/settings/application) to find it. You can also change the `ENVIRONMENT` based on whether you want to target real (`development`, `production`) or fake (`sandbox`) bank accounts. Save the file then run: 
 ```
 $ ./static.sh
 ```

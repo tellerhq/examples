@@ -1,4 +1,5 @@
 const APPLICATION_ID = '';
+const ENVIRONMENT = 'sandbox';
 const BASE_URL = 'http://localhost:8001/api';
 
 class TellerStore {
@@ -62,12 +63,34 @@ class Client {
     return this.get(`/accounts/${account.id}/transactions`);
   }
 
+  listAccountPayees(account) {
+    return this.get(`/accounts/${account.id}/payments/zelle/payees`);
+  }
+
+  createAccountPayee(account, payee) {
+    return this.post(`/accounts/${account.id}/payments/zelle/payees`, {payee});
+  }
+
+  createAccountPayment(account, payment) {
+    return this.post(`/accounts/${account.id}/payments/zelle`, {payment});
+  }
+
   get(path) {
+    return this.request('GET', path, null);
+  }
+
+  post(path, data) {
+    return this.request('POST', path, JSON.stringify(data));
+  }
+
+  request(method, path, data) {
     const request = new Request(this.baseURL + path, {
-      method: 'GET',
+      method: method,
       headers: new Headers({
         'Authorization': this.accessToken,
+        'Content-Type': 'application/json',
       }),
+      body: data,
     });
 
     return fetch(request);
@@ -110,6 +133,7 @@ class EnrollmentHandler {
     const template = this.templates.detail;
     const spinner = new Spinner(container);
     const header = this.templates.log.render({
+      method: 'GET',
       name: 'Details',
       path: `/accounts/${account.id}/details`,
     });
@@ -133,6 +157,7 @@ class EnrollmentHandler {
     const template = this.templates.balance;
     const spinner = new Spinner(container);
     const header = this.templates.log.render({
+      method: 'GET',
       name: 'Balances',
       path: `/accounts/${account.id}/balances`,
     });
@@ -156,6 +181,7 @@ class EnrollmentHandler {
     const template = this.templates.transaction;
     const spinner = new Spinner(container);
     const header = this.templates.log.render({
+      method: 'GET',
       name: 'Transactions',
       path: `/accounts/${account.id}/transactions?count=30`,
     });
@@ -171,6 +197,100 @@ class EnrollmentHandler {
           container.prepend(template.render(transaction));
         });
 
+        container.prepend(header);
+        spinner.hide();
+      });
+  }
+
+  onPayees(account) {
+    const container = this.containers.logs;
+    const template = this.templates.payee;
+    const spinner = new Spinner(container);
+    const header = this.templates.log.render({
+      method: 'GET',
+      name: 'Payees',
+      path: `/accounts/${account.id}/payments/zelle/payees`,
+    });
+
+    spinner.show();
+
+    const onCreatePayment = this.onCreatePayment.bind(this);
+    this.client.listAccountPayees(account)
+      .then(function(response) {
+        return response.json();
+      })
+      .then(function(payees) {
+        payees.forEach(function(payee) {
+          const callback = function() {
+            onCreatePayment(account, payee);
+          };
+          container.prepend(template.render(payee, callback));
+        });
+
+        container.prepend(header);
+        spinner.hide();
+      });
+  }
+
+  onCreatePayee(account) {
+    const container = this.containers.logs;
+    const template = this.templates.payee;
+    const spinner = new Spinner(container);
+    const header = this.templates.log.render({
+      method: 'POST',
+      name: 'Payees',
+      path: `/accounts/${account.id}/payments/zelle/payees`,
+    });
+
+    spinner.show();
+
+    const person = generatePerson();
+    const payee = {
+      name: person.name,
+      type: 'person',
+      address: {
+        type: 'email',
+        value: person.email,
+      },
+    };
+
+    this.client.createAccountPayee(account, payee)
+      .then(function(response) {
+        return response.json();
+      })
+      .then(function(payee) {
+        const callback = function() {
+          this.onCreatePayment(account, payee);
+        }.bind(this);
+
+        container.prepend(template.render(payee, callback));
+        container.prepend(header);
+        spinner.hide();
+      });
+  }
+
+  onCreatePayment(account, payee) {
+    const container = this.containers.logs;
+    const template = this.templates.payment;
+    const spinner = new Spinner(container);
+    const header = this.templates.log.render({
+      method: 'POST',
+      name: 'Payments',
+      path: `/accounts/${account.id}/payments/zelle`,
+    });
+
+    spinner.show();
+
+    const amount = Math.floor(Math.random() * 100);
+    const payment = {
+      payee_id: payee.id,
+      amount: `${amount}.00`,
+      memo: "Teller Test",
+    };
+
+    this.client.createAccountPayment(account, payment)
+      .then(function(response) {
+        container.prepend(template.render(payment, payee));
         container.prepend(header);
         spinner.hide();
       });
@@ -218,7 +338,7 @@ class LogTemplate {
 
     name.textContent = resource.name;
     timestamp.textContent = new Date().toLocaleString();
-    http.textContent = `GET ${resource.path}`;
+    http.textContent = `${resource.method} ${resource.path}`;
 
     return node;
   }
@@ -239,15 +359,21 @@ class AccountTemplate {
     const details = node.querySelector('.account .details');
     const balances = node.querySelector('.account .balances');
     const transactions = node.querySelector('.account .transactions');
+    const payees = node.querySelector('.account .payees');
+    const createPayee = node.querySelector('.account .create-payee');
 
     title.textContent = [account.name, account.last_four].join(', ');
     institution.textContent = account.institution.id;
     type.textContent = account.type;
     subtype.textContent = account.subtype;
 
-    details.addEventListener('click', function() {
-      callbacks.onDetails(account);
-    });
+    if (account.type == "depository") {
+      details.addEventListener('click', function() {
+        callbacks.onDetails(account);
+      });
+    } else {
+      details.setAttribute('disabled', true);
+    }
 
     balances.addEventListener('click', function() {
       callbacks.onBalances(account);
@@ -256,6 +382,19 @@ class AccountTemplate {
     transactions.addEventListener('click', function() {
       callbacks.onTransactions(account);
     });
+
+    if (account.subtype == 'checking') {
+      payees.addEventListener('click', function() {
+        callbacks.onPayees(account);
+      });
+
+      createPayee.addEventListener('click', function() {
+        callbacks.onCreatePayee(account);
+      });
+    } else {
+      payees.setAttribute('disabled', true);
+      createPayee.setAttribute('disabled', true);
+    }
 
     return node;
   }
@@ -317,6 +456,44 @@ class TransactionTemplate {
   }
 }
 
+class PayeeTemplate {
+  constructor(template) {
+    this.template = template;
+  }
+
+  render(payee, callback) {
+    const node = this.template.content.cloneNode(true);
+
+    const name = node.querySelector('.payee .name');
+    const address = node.querySelector('.payee .address');
+    const createPayment = node.querySelector('.payee .create-payment');
+
+    name.textContent = payee.name;
+    address.textContent = payee.address.value;
+    createPayment.addEventListener('click', callback);
+
+    return node;
+  }
+}
+
+class PaymentTemplate {
+  constructor(template) {
+    this.template = template;
+  }
+
+  render(payment, payee) {
+    const node = this.template.content.cloneNode(true);
+
+    const name = node.querySelector('.payment .name');
+    const amount = node.querySelector('.payment .amount');
+
+    name.textContent = payee.name;
+    amount.textContent = `${payment.amount}$`;
+
+    return node;
+  }
+}
+
 class StatusHandler {
   constructor(button) {
     this.connected = false;
@@ -360,6 +537,31 @@ class Spinner {
   }
 }
 
+function generatePerson() {
+  const pickRandom = function(choices) {
+    return choices[Math.floor(Math.random() * choices.length)];
+  }
+
+  const firstName = pickRandom([
+    'William', 'James', 'Evelyn', 'Harper', 'Mason',
+    'Ella', 'Jackson', 'Avery', 'Scarlett', 'Jack',
+  ]);
+
+  const middleLetter = pickRandom('ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+
+  const lastName = pickRandom([
+    'Adams', 'Wilson', 'Burton', 'Harris', 'Stevens',
+    'Robinson', 'Lewis', 'Walker', 'Payne', 'Baker',
+  ]);
+
+  const username = (Math.random() + 1).toString(36).substring(2);
+
+  return {
+    name: `${firstName} ${middleLetter}. ${lastName}`,
+    email: `${username}@teller.io`,
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function(event) {
   const containers = {
     accounts: document.getElementById('accounts'),
@@ -372,6 +574,8 @@ document.addEventListener('DOMContentLoaded', function(event) {
     detail: new DetailTemplate(document.getElementById('detail-template')),
     balance: new BalanceTemplate(document.getElementById('balance-template')),
     transaction: new TransactionTemplate(document.getElementById('transaction-template')),
+    payee: new PayeeTemplate(document.getElementById('payee-template')),
+    payment: new PaymentTemplate(document.getElementById('payment-template')),
   };
 
   const labels = {
@@ -389,6 +593,7 @@ document.addEventListener('DOMContentLoaded', function(event) {
 
   const tellerConnect = TellerConnect.setup({
     applicationId: APPLICATION_ID,
+    environment: ENVIRONMENT,
     onSuccess: function(enrollment) {
       store.putUser(enrollment.user);
       store.putEnrollment(enrollment);

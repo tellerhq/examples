@@ -34,3 +34,9 @@
     transform: rotate(360deg);
   }
 }
+
+button:disabled {
+  opacity: 75%;
+  background-color: #eee !important;
+  pointer-events: none;
+}

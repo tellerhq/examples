@@ -68,6 +68,14 @@
             Transactions
           </button>
         </div>
+        <div class="flex mt-2">
+          <button type="button" class="create-payee inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 w-full mx-2">
+            New Payee
+          </button>
+          <button type="button" class="payees inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 w-full mr-2">
+            Payees
+          </button>
+        </div>
       </div>
     </template>
     <template id="log-template">
@@ -114,6 +122,33 @@
             <div class="flex-grow">
               <div class="description"></div>
               <div class="date text-sm text-gray-400"></div>
+            </div>
+            <span class="amount inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800"></span>
+          </div>
+        </div>
+      </div>
+    </template>
+    <template id="payee-template">
+      <div class="payee mb-3">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="flex items-center px-4 py-3">
+            <div class="flex-grow">
+              <div class="name"></div>
+              <div class="address text-sm text-gray-400"></div>
+            </div>
+            <button type="button" class="create-payment inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+              New Payment
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+    <template id="payment-template">
+      <div class="payment mb-3">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="flex items-center px-4 py-3">
+            <div class="flex-grow">
+              Payment sent to <span class="name"></span>.
             </div>
             <span class="amount inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800"></span>
           </div>
