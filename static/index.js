@@ -254,14 +254,15 @@ class EnrollmentHandler {
       },
     };
 
+    const enrollmentHandler = this;
     this.client.createAccountPayee(account, payee)
       .then(function(response) {
         return response.json();
       })
       .then(function(payee) {
         const callback = function() {
-          this.onCreatePayment(account, payee);
-        }.bind(this);
+          enrollmentHandler.onCreatePayment(account, payee);
+        };
 
         container.prepend(template.render(payee, callback));
         container.prepend(header);
