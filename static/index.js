@@ -236,65 +236,141 @@ class EnrollmentHandler {
     const container = this.containers.logs;
     const template = this.templates.payee;
     const spinner = new Spinner(container);
+    const rootContainer = this.containers.root;
+    const modalTemplate = this.templates.payeeModal;
+
     const header = this.templates.log.render({
       method: 'POST',
       name: 'Payees',
       path: `/accounts/${account.id}/payments/zelle/payees`,
     });
 
-    spinner.show();
-
     const person = generatePerson();
-    const payee = {
-      name: person.name,
-      type: 'person',
-      address: {
-        type: 'email',
-        value: person.email,
-      },
-    };
+    const modal = modalTemplate.render(person.name, person.email);
+    rootContainer.append(modal);
 
     const enrollmentHandler = this;
-    this.client.createAccountPayee(account, payee)
-      .then(function(response) {
-        return response.json();
-      })
-      .then(function(payee) {
-        const callback = function() {
-          enrollmentHandler.onCreatePayment(account, payee);
-        };
 
-        container.prepend(template.render(payee, callback));
-        container.prepend(header);
-        spinner.hide();
-      });
+    document.getElementById('submit-payee').addEventListener('click', function() {
+      const name = document.getElementById('payee-name').value;
+      const email = document.getElementById('payee-email').value;
+
+      document.getElementById('payee-modal').remove();
+      spinner.show();
+
+      const payee = {
+        name: name,
+        type: 'person',
+        address: {
+          type: 'email',
+          value: email,
+        },
+      };
+
+      enrollmentHandler.client.createAccountPayee(account, payee)
+        .then(function(response) {
+          return response.json();
+        })
+        .then(function(payee) {
+          const callback = function() {
+            enrollmentHandler.onCreatePayment(account, payee);
+          };
+
+          container.prepend(template.render(payee, callback));
+          container.prepend(header);
+          spinner.hide();
+        });
+    });
+
+    document.getElementById('payee-modal').addEventListener('click', function() {
+      document.getElementById('payee-modal').remove();
+    });
+
+    document.getElementById('payee-modal-content').addEventListener('click', function(e) {
+      // prevent event from propagating to the dismiss function
+      e.stopPropagation();
+    });
   }
 
   onCreatePayment(account, payee) {
     const container = this.containers.logs;
-    const template = this.templates.payment;
+    const rootContainer = this.containers.root;
     const spinner = new Spinner(container);
+    const template = this.templates.paymentModal;
+
+    const prefilledMemo = 'Teller test';
+    const prefilledAmount = `${Math.ceil(Math.random() * 100)}.00`;
+
+    const modal = template.render(prefilledMemo, prefilledAmount);
+    rootContainer.append(modal);
+
+    const enrollmentHandler = this;
+
+    document.getElementById('submit-payment').addEventListener('click', function() {
+      const memo = document.getElementById('payment-memo').value;
+      const amount = document.getElementById('payment-amount').value;
+
+      document.getElementById('payment-modal').remove();
+      spinner.show();
+
+      const payment = {
+        payee_id: payee.id,
+        amount: amount,
+        memo: memo,
+      };
+
+      enrollmentHandler.client.createAccountPayment(account, payment)
+        .then(function(response) {
+          return response.json();
+        })
+        .then(function(payment_response) {
+          spinner.hide();
+          enrollmentHandler.onPaymentResponse(account, payee, payment, payment_response);
+        });
+    });
+
+    document.getElementById('payment-modal').addEventListener('click', function() {
+      document.getElementById('payment-modal').remove();
+    });
+
+    document.getElementById('payment-modal-content').addEventListener('click', function(e) {
+      // prevent event from propagating to the dismiss function
+      e.stopPropagation();
+    });
+  }
+
+  onPaymentResponse(account, payee, payment, payment_response) {
+    const container = this.containers.logs;
+    const spinner = new Spinner(container);
+    const template = this.templates.payment;
     const header = this.templates.log.render({
       method: 'POST',
       name: 'Payments',
       path: `/accounts/${account.id}/payments/zelle`,
     });
 
-    spinner.show();
+    if (payment_response.connect_token) {
+      spinner.show();
 
-    const amount = Math.floor(Math.random() * 100);
-    const payment = {
-      payee_id: payee.id,
-      amount: `${amount}.00`,
-      memo: "Teller Test",
-    };
-
-    this.client.createAccountPayment(account, payment)
-      .then(function(response) {
-        container.prepend(template.render(payment, payee));
-        container.prepend(header);
-        spinner.hide();
+      const tellerConnect = TellerConnect.setup({
+        applicationId: APPLICATION_ID,
+        environment: ENVIRONMENT,
+        connectToken: payment_response.connect_token,
+        onSuccess: function(enrollment) {
+          // nothing to do here, we're already enrolled
+        },
+        onPaymentSuccess: function() {
+          container.prepend(template.render(payment, payee));
+          container.prepend(header);
+          spinner.hide();
+        },
       });
+
+      tellerConnect.open();
+    } else {
+      container.prepend(template.render(payment, payee));
+      container.prepend(header);
+    }
   }
 
   clear() {
@@ -457,6 +533,24 @@ class TransactionTemplate {
   }
 }
 
+class PayeeModalTemplate {
+  constructor(template) {
+    this.template = template;
+  }
+
+  render(prefilledName, prefilledEmail) {
+    const node = this.template.content.cloneNode(true);
+
+    const name = node.querySelector('#payee-name');
+    const email = node.querySelector('#payee-email');
+
+    name.value = prefilledName;
+    email.value = prefilledEmail;
+
+    return node;
+  }
+}
+
 class PayeeTemplate {
   constructor(template) {
     this.template = template;
@@ -472,6 +566,24 @@ class PayeeTemplate {
     name.textContent = payee.name;
     address.textContent = payee.address.value;
     createPayment.addEventListener('click', callback);
+
+    return node;
+  }
+}
+
+class PaymentModalTemplate {
+  constructor(template) {
+    this.template = template;
+  }
+
+  render(prefilledMemo, prefilledAmount) {
+    const node = this.template.content.cloneNode(true);
+
+    const memo = node.querySelector('#payment-memo');
+    const amount = node.querySelector('#payment-amount');
+
+    memo.value = prefilledMemo;
+    amount.value = prefilledAmount;
 
     return node;
   }
@@ -567,6 +679,7 @@ document.addEventListener('DOMContentLoaded', function(event) {
   const containers = {
     accounts: document.getElementById('accounts'),
     logs: document.getElementById('logs'),
+    root: document.getElementsByTagName('body')[0]
   };
 
   const templates = {
@@ -577,6 +690,8 @@ document.addEventListener('DOMContentLoaded', function(event) {
     transaction: new TransactionTemplate(document.getElementById('transaction-template')),
     payee: new PayeeTemplate(document.getElementById('payee-template')),
     payment: new PaymentTemplate(document.getElementById('payment-template')),
+    payeeModal: new PayeeModalTemplate(document.getElementById('payee-modal-template')),
+    paymentModal: new PaymentModalTemplate(document.getElementById('payment-modal-template'))
   };
 
   const labels = {

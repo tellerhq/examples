@@ -6,7 +6,8 @@
 
     <link href="index.css" rel="stylesheet">
     <link href="https://rsms.me/inter/inter.css" rel="stylesheet">
-    <link href="https://unpkg.com/tailwindcss@2.1.1/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/tailwindcss@2.2.15/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/@tailwindcss/forms@0.3.3/dist/forms.min.css" rel="stylesheet">
 
     <title>Teller Demo</title>
   </head>
@@ -47,6 +48,81 @@
         </div>
       </div>
     </div>
+
+    <template id="payee-modal-template">
+      <div id="payee-modal" class="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="create-payment" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+          <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+
+          <!-- This element is to trick the browser into centering the modal contents. -->
+          <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+          <div id="payee-modal-content" class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm sm:w-full sm:p-6">
+            <div>
+              <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+                </svg>
+              </div>
+              <div class="flex flex-col mt-3 sm:mt-5 space-y-2">
+                <div class="">
+                  <label for="payee-name" class="block text-sm font-medium text-gray-700">Name</label>
+                  <input type="text" name="payee-name" id="payee-name" class="mt-1 rounded-md focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
+                </div>
+
+                <div class="">
+                  <label for="payee-email" class="block text-sm font-medium text-gray-700">Email</label>
+                  <input type="email" name="payee-email" id="payee-email" class="mt-1 rounded-md focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
+                </div>
+              </div>
+            </div>
+            <div class="mt-5 sm:mt-6">
+              <button id="submit-payee" type="button" class="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm">
+                Create Payee
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <template id="payment-modal-template">
+      <div id="payment-modal" class="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="create-payment" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+          <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+
+          <!-- This element is to trick the browser into centering the modal contents. -->
+          <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+          <div id="payment-modal-content" class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm sm:w-full sm:p-6">
+            <div>
+              <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8zM12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
+                </svg>
+              </div>
+              <div class="flex flex-row mt-3 sm:mt-5 space-x-2">
+                <div class="">
+                  <label for="payment-memo" class="block text-sm font-medium text-gray-700">Memo</label>
+                  <input type="text" name="payment-memo" id="payment-memo" class="mt-1 rounded-md focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
+                </div>
+
+                <div class="w-32">
+                  <label for="payment-amount" class="block text-sm font-medium text-gray-700">Amount</label>
+                  <input type="number" name="payment-amount" id="payment-amount" class="mt-1 rounded-md focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
+                </div>
+              </div>
+            </div>
+            <div class="mt-5 sm:mt-6">
+              <button id="submit-payment" type="button" class="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm">
+                Create Payment
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
     <template id="account-template">
       <div class="account mb-8">
         <div class="bg-white overflow-hidden shadow rounded-lg divide-y divide-gray-200">

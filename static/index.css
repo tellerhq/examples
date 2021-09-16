@@ -40,3 +40,7 @@ button:disabled {
   background-color: #eee !important;
   pointer-events: none;
 }
+
+.rounded-md {
+  border-radius: .375rem !important;
+}

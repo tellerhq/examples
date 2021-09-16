@@ -113,6 +113,8 @@ def main():
     cert = (args.cert, args.cert_key)
     client = TellerClient(cert)
 
+    print("Starting up ...")
+
     accounts = AccountsResource(client)
 
     application = falcon.App(cors_enable=True)
@@ -129,8 +131,10 @@ def main():
             suffix='payments')
 
     httpd = simple_server.make_server('', 8001, application)
-    httpd.serve_forever()
 
+    print("Listening on port 8001, press ^C to stop.\n")
+
+    httpd.serve_forever()
 
 if __name__ == '__main__':
     main()
