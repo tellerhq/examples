@@ -10,7 +10,9 @@ This can be quickly spun up by utilizing docker. Make sure you have [docker](htt
 
 `docker-compose up --build -d`
 
-Then navigate to `127.0.0.1:8000` to begin using app
+Then navigate to `127.0.0.1:8000` to begin using app.
+
+You will still need to set application_id in `index.js` before starting containers.
 
 ## Set-Up
 
