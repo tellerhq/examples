@@ -5,7 +5,6 @@ import argparse
 import falcon
 import requests
 
-
 class TellerClient:
 
     _BASE_URL = 'https://api.teller.io'
@@ -117,22 +116,27 @@ def main():
 
     accounts = AccountsResource(client)
 
-    application = falcon.App(cors_enable=True)
-    application.add_route('/api/accounts', accounts)
-    application.add_route('/api/accounts/{account_id}/details', accounts,
+    app = falcon.App(
+        middleware=falcon.CORSMiddleware(allow_origins='*', allow_credentials='*')
+    )
+
+    app.add_route('/api/accounts', accounts)
+    app.add_route('/api/accounts/{account_id}/details', accounts,
             suffix='details')
-    application.add_route('/api/accounts/{account_id}/balances', accounts,
+    app.add_route('/api/accounts/{account_id}/balances', accounts,
             suffix='balances')
-    application.add_route('/api/accounts/{account_id}/transactions', accounts,
+    app.add_route('/api/accounts/{account_id}/transactions', accounts,
             suffix='transactions')
-    application.add_route('/api/accounts/{account_id}/payments/{scheme}/payees', accounts,
+    app.add_route('/api/accounts/{account_id}/payments/{scheme}/payees', accounts,
             suffix='payees')
-    application.add_route('/api/accounts/{account_id}/payments/{scheme}', accounts,
+    app.add_route('/api/accounts/{account_id}/payments/{scheme}', accounts,
             suffix='payments')
 
-    httpd = simple_server.make_server('', 8001, application)
+    port = os.getenv('PORT') or '8001'
 
-    print("Listening on port 8001, press ^C to stop.\n")
+    httpd = simple_server.make_server('', int(port), app)
+
+    print(f"Listening on port {port}, press ^C to stop.\n")
 
     httpd.serve_forever()
 
