@@ -356,12 +356,12 @@ class EnrollmentHandler {
         applicationId: APPLICATION_ID,
         environment: ENVIRONMENT,
         connectToken: payment_response.connect_token,
-        onSuccess: function(enrollment) {
-          // nothing to do here, we're already enrolled
-        },
-        onPaymentSuccess: function() {
+        onSuccess: function(payment_data) {
           container.prepend(template.render(payment, payee));
           container.prepend(header);
+          spinner.hide();
+        },
+        onFailure: function(details) {
           spinner.hide();
         },
       });
