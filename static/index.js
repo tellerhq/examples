@@ -710,6 +710,7 @@ document.addEventListener('DOMContentLoaded', function(event) {
   const tellerConnect = TellerConnect.setup({
     applicationId: APPLICATION_ID,
     environment: ENVIRONMENT,
+    selectAccount: 'multiple',
     onSuccess: function(enrollment) {
       store.putUser(enrollment.user);
       store.putEnrollment(enrollment);
