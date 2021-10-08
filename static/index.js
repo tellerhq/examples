@@ -729,6 +729,7 @@ document.addEventListener('DOMContentLoaded', function(event) {
         enrollmentHandler.clear();
         userHandler.clear();
         store.clear();
+        location.reload();
       },
     });
   });
