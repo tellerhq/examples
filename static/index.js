@@ -234,16 +234,9 @@ class EnrollmentHandler {
 
   onCreatePayee(account) {
     const container = this.containers.logs;
-    const template = this.templates.payee;
     const spinner = new Spinner(container);
     const rootContainer = this.containers.root;
     const modalTemplate = this.templates.payeeModal;
-
-    const header = this.templates.log.render({
-      method: 'POST',
-      name: 'Payees',
-      path: `/accounts/${account.id}/payments/zelle/payees`,
-    });
 
     const person = generatePerson();
     const modal = modalTemplate.render(person.name, person.email);
@@ -271,14 +264,9 @@ class EnrollmentHandler {
         .then(function(response) {
           return response.json();
         })
-        .then(function(payee) {
-          const callback = function() {
-            enrollmentHandler.onCreatePayment(account, payee);
-          };
-
-          container.prepend(template.render(payee, callback));
-          container.prepend(header);
+        .then(function(payeeResponse) {
           spinner.hide();
+          enrollmentHandler.onPayeeResponse(account, payee, payeeResponse);
         });
     });
 
@@ -323,9 +311,9 @@ class EnrollmentHandler {
         .then(function(response) {
           return response.json();
         })
-        .then(function(payment_response) {
+        .then(function(paymentResponse) {
           spinner.hide();
-          enrollmentHandler.onPaymentResponse(account, payee, payment, payment_response);
+          enrollmentHandler.onPaymentResponse(account, payee, payment, paymentResponse);
         });
     });
 
@@ -339,7 +327,49 @@ class EnrollmentHandler {
     });
   }
 
-  onPaymentResponse(account, payee, payment, payment_response) {
+  onPayeeResponse(account, payee, payeeResponse) {
+
+    const enrollmentHandler = this;
+    const container = this.containers.logs;
+    const template = this.templates.payee;
+    const spinner = new Spinner(container);
+
+    const header = this.templates.log.render({
+      method: 'POST',
+      name: 'Payees',
+      path: `/accounts/${account.id}/payments/zelle/payees`,
+    });
+
+    const callback = function() {
+      enrollmentHandler.onCreatePayment(account, payeeResponse);
+    };
+
+    if (payeeResponse.connect_token) {
+      spinner.show();
+
+      const tellerConnect = TellerConnect.setup({
+        applicationId: APPLICATION_ID,
+        environment: ENVIRONMENT,
+        connectToken: payeeResponse.connect_token,
+        onSuccess: function(payeeData) {
+          container.prepend(template.render(payee, callback));
+          container.prepend(header);
+          spinner.hide();
+        },
+        onFailure: function(details) {
+          spinner.hide();
+        },
+      });
+
+      tellerConnect.open();
+
+    } else {
+      container.prepend(template.render(payee, callback));
+      container.prepend(header);
+    }
+  }
+
+  onPaymentResponse(account, payee, payment, paymentResponse) {
     const container = this.containers.logs;
     const spinner = new Spinner(container);
     const template = this.templates.payment;
@@ -349,13 +379,13 @@ class EnrollmentHandler {
       path: `/accounts/${account.id}/payments/zelle`,
     });
 
-    if (payment_response.connect_token) {
+    if (paymentResponse.connect_token) {
       spinner.show();
 
       const tellerConnect = TellerConnect.setup({
         applicationId: APPLICATION_ID,
         environment: ENVIRONMENT,
-        connectToken: payment_response.connect_token,
+        connectToken: paymentResponse.connect_token,
         onSuccess: function(payment_data) {
           container.prepend(template.render(payment, payee));
           container.prepend(header);
