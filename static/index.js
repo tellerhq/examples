@@ -68,11 +68,11 @@ class Client {
   }
 
   createAccountPayee(account, payee) {
-    return this.post(`/accounts/${account.id}/payments/zelle/payees`, {payee});
+    return this.post(`/accounts/${account.id}/payments/zelle/payees`, payee);
   }
 
   createAccountPayment(account, payment) {
-    return this.post(`/accounts/${account.id}/payments/zelle`, {payment});
+    return this.post(`/accounts/${account.id}/payments/zelle`, payment);
   }
 
   get(path) {
