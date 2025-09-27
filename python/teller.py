@@ -1,144 +1,142 @@
 import os
-from wsgiref import simple_server
-
+import sys
 import argparse
-import falcon
 import requests
+from base64 import b64encode
+from flask import Flask, request, Response, render_template
+from flask_cors import CORS
 
-class TellerClient:
-
-    _BASE_URL = 'https://api.teller.io'
-
-    def __init__(self, cert, access_token=None):
-        self.cert = cert
-        self.access_token = access_token
-
-    def for_user(self, access_token):
-        return TellerClient(self.cert, access_token)
-
-    def list_accounts(self):
-        return self._get('/accounts')
-
-    def get_account_details(self, account_id):
-        return self._get(f'/accounts/{account_id}/details')
-
-    def get_account_balances(self, account_id):
-        return self._get(f'/accounts/{account_id}/balances')
-
-    def list_account_transactions(self, account_id):
-        return self._get(f'/accounts/{account_id}/transactions')
-
-    def list_account_payees(self, account_id, scheme):
-        return self._get(f'/accounts/{account_id}/payments/{scheme}/payees')
-
-    def create_account_payee(self, account_id, scheme, data):
-        return self._post(f'/accounts/{account_id}/payments/{scheme}/payees', data)
-
-    def create_account_payment(self, account_id, scheme, data):
-        return self._post(f'/accounts/{account_id}/payments/{scheme}', data)
-
-    def _get(self, path):
-        return self._request('GET', path)
-
-    def _post(self, path, data):
-        return self._request('POST', path, data)
-
-    def _request(self, method, path, data=None):
-        url = self._BASE_URL + path
-        auth = (self.access_token, '')
-        return requests.request(method, url, json=data, cert=self.cert, auth=auth)
+BASE_TELLER_URL = "https://api.teller.io"
 
 
-class AccountsResource:
+# ---------------- Config Parsing ---------------- #
 
-    def __init__(self, client):
-        self._client = client
+def parse_config():
+    parser = argparse.ArgumentParser(description="Teller example Flask proxy")
 
-    def on_get(self, req, resp):
-        self._proxy(req, resp, lambda client: client.list_accounts())
-
-    def on_get_details(self, req, resp, account_id):
-        self._proxy(req, resp, lambda client: client.get_account_details(account_id))
-
-    def on_get_balances(self, req, resp, account_id):
-        self._proxy(req, resp, lambda client: client.get_account_balances(account_id))
-
-    def on_get_transactions(self, req, resp, account_id):
-        self._proxy(req, resp, lambda client: client.list_account_transactions(account_id))
-
-    def on_get_payees(self, req, resp, account_id, scheme):
-        self._proxy(req, resp, lambda client: client.list_account_payees(account_id, scheme))
-
-    def on_post_payees(self, req, resp, account_id, scheme):
-        self._proxy(req, resp, lambda client: client.create_account_payee(account_id, scheme, req.media))
-
-    def on_post_payments(self, req, resp, account_id, scheme):
-        self._proxy(req, resp, lambda client: client.create_account_payment(account_id, scheme, req.media))
-
-    def _proxy(self, req, resp, fun):
-        user_client = self._client.for_user(req.auth)
-        teller_response = fun(user_client)
-
-        if teller_response.content:
-          resp.media = teller_response.json()
-
-        resp.status = falcon.code_to_http_status(teller_response.status_code)
-
-
-def _parse_args():
-    parser = argparse.ArgumentParser(description='Interact with Teller')
-
-    parser.add_argument('--environment',
-            default='sandbox',
-            choices=['sandbox', 'development', 'production'],
-            help='API environment to target')
-    parser.add_argument('--cert', type=str,
-            help='path to the TLS certificate')
-    parser.add_argument('--cert-key', type=str,
-            help='path to the TLS certificate private key')
+    parser.add_argument(
+        "--application-id",
+        default=os.getenv("APP_ID"),
+        help="Teller Application ID (or set APP_ID env var)",
+    )
+    parser.add_argument(
+        "--environment",
+        default=os.getenv("ENV", "sandbox"),
+        choices=["sandbox", "development", "production"],
+        help="Target environment (defaults to sandbox, or set ENV env var)",
+    )
+    parser.add_argument(
+        "--cert",
+        default=os.getenv("CERT"),
+        help="Path to TLS certificate (or set CERT env var)",
+    )
+    parser.add_argument(
+        "--cert-key",
+        default=os.getenv("CERT_KEY"),
+        help="Path to TLS private key (or set CERT_KEY env var)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.getenv("PORT", "8001")),
+        help="Port to bind (default from PORT env var, fallback 8001)",
+    )
 
     args = parser.parse_args()
 
-    needs_cert = args.environment in ['development', 'production']
-    has_cert = args.cert and args.cert_key
-    if needs_cert and not has_cert:
-        parser.error('--cert and --cert-key are required when --environment is not sandbox')
+    # validation
+    if not args.application_id:
+        sys.stderr.write(
+            "Error: application-id is required.\n"
+            "Provide with --application-id or APP_ID env var.\n"
+        )
+        sys.exit(1)
+
+    needs_cert = args.environment in ("development", "production")
+    if needs_cert and (not args.cert or not args.cert_key):
+        sys.stderr.write(
+            f"Error: cert and cert-key required when ENV is {args.environment}.\n"
+            "Provide with --cert/--cert-key or CERT/CERT_KEY env vars.\n"
+        )
+        sys.exit(1)
 
     return args
 
 
-def main():
-    args = _parse_args()
-    cert = (args.cert, args.cert_key)
-    client = TellerClient(cert)
+# ---------------- Flask App ---------------- #
 
-    print("Starting up ...")
+def create_app(app_id: str, environment: str, cert_tuple=None) -> Flask:
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    static_dir = os.path.join(base_dir, "..", "static")
 
-    accounts = AccountsResource(client)
-
-    app = falcon.App(
-        middleware=falcon.CORSMiddleware(allow_origins='*', allow_credentials='*')
+    app = Flask(
+        __name__,
+        static_folder=static_dir,
+        template_folder=static_dir,
     )
 
-    app.add_route('/api/accounts', accounts)
-    app.add_route('/api/accounts/{account_id}/details', accounts,
-            suffix='details')
-    app.add_route('/api/accounts/{account_id}/balances', accounts,
-            suffix='balances')
-    app.add_route('/api/accounts/{account_id}/transactions', accounts,
-            suffix='transactions')
-    app.add_route('/api/accounts/{account_id}/payments/{scheme}/payees', accounts,
-            suffix='payees')
-    app.add_route('/api/accounts/{account_id}/payments/{scheme}', accounts,
-            suffix='payments')
+    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
-    port = os.getenv('PORT') or '8001'
+    @app.route("/api/<path:path>", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"])
+    def proxy(path: str):
+        upstream_url = f"{BASE_TELLER_URL}/{path}"
 
-    httpd = simple_server.make_server('', int(port), app)
+        # Forward headers except Host
+        fwd_headers = {k: v for k, v in request.headers if k.lower() != "host"}
 
-    print(f"Listening on port {port}, press ^C to stop.\n")
+        # Fix Authorization: Browser sends raw token, Teller expects Basic <base64(token:)>
+        raw_auth = request.headers.get("Authorization")
+        if raw_auth:
+            token = raw_auth.strip()
+            basic = b64encode(f"{token}:".encode()).decode()
+            fwd_headers["Authorization"] = f"Basic {basic}"
 
-    httpd.serve_forever()
+        body = request.get_data()
+        cert = cert_tuple if cert_tuple and all(cert_tuple) else None
 
-if __name__ == '__main__':
+        try:
+            resp = requests.request(
+                method=request.method,
+                url=upstream_url,
+                headers=fwd_headers,
+                data=body,
+                cert=cert,
+                verify=True,
+            )
+        except requests.RequestException as e:
+            return Response(f"Upstream error: {e}", status=502)
+
+        # Strip hop-by-hop/problematic headers
+        excluded = {"content-encoding", "transfer-encoding", "connection"}
+        safe_headers = [(k, v) for k, v in resp.headers.items() if k.lower() not in excluded]
+
+        return Response(resp.content, status=resp.status_code, headers=safe_headers)
+
+    @app.route("/")
+    def index():
+        return render_template("index.html", app_id=app_id, environment=environment)
+
+    @app.route("/healthz")
+    def healthz():
+        return {"status": "ok", "env": environment}, 200
+
+    return app
+
+
+# ---------------- Entrypoint ---------------- #
+
+def main():
+    args = parse_config()
+
+    cert_tuple = (args.cert, args.cert_key) if args.cert and args.cert_key else None
+    app = create_app(args.application_id, args.environment, cert_tuple)
+
+    print(
+        f"Listening on http://localhost:{args.port} "
+        f"(ENV={args.environment}, APP_ID={args.application_id})\n"
+    )
+    app.run(host="0.0.0.0", port=args.port)
+
+
+if __name__ == "__main__":
     main()

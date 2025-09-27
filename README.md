@@ -1,20 +1,68 @@
 # Teller Examples
 
-## Introduction
+This project contains a simple front-end and multiple back-end implementations
+for proxying requests to Teller’s API.
 
-This repository contains a small web front-end that allows easy interaction with Teller Connect and Teller's API via a back-end written in one of many languages. It can also serve as a starting point for your Teller integration.
+---
 
-## Set-Up
+## Quick Start
 
-The only general dependency for the project is `python` version `3+`. Go ahead and clone the repository on your local machine. Based on the language you want to use for your back-end, visit the language's folder `README.md` for further instructions. Once the back-end is running locally, proceed to starting the static file server for the front-end application. Open the `static/index.js` file and fill the value associated to the `APPLICATION_ID` constant which appears at the top of the file with your Teller application's ID. If you are not sure what it is, visit [this page](https://teller.io/settings/application) to find it. You can also change the `ENVIRONMENT` based on whether you want to target real (`development`, `production`) or fake (`sandbox`) bank accounts. Save the file then run: 
+Run the Python back-end (default):
+
+```sh
+make APP_ID=app_xxx
 ```
-$ ./static.sh
+
+Visit [http://localhost:8001](http://localhost:8001).
+
+---
+
+## Other Languages
+
+If you want to try a different back-end, specify the language:
+
+```sh
+make run node APP_ID=app_xxx
+make run ruby APP_ID=app_xxx
+make run go APP_ID=app_xxx
+make run elixir APP_ID=app_xxx
+make run php APP_ID=app_xxx
+make run dotnet APP_ID=app_xxx
+make run java APP_ID=app_xxx
 ```
 
-This will start a simple HTTP server listening on `:8000`. You can now visit [localhost:8000](http://localhost:8000) in your browser and start using the application.
+Each implementation lives under `examples/<language>/` with a `run.sh`.
+
+---
+
+## Environment
+
+- `APP_ID` (required) — your Teller application ID  
+- `ENV` (optional, default: `sandbox`) — set to `development` or `production` for live data  
+- `CERT` and `CERT_KEY` (required only for `development` or `production`)  
+
+Example:
+
+```sh
+make run java APP_ID=app_xxx ENV=development CERT=cert.pem CERT_KEY=key.pem
+```
+
+---
 
 ## Usage
 
-Use the *Connect* button on the top-right of the screen to enroll a new user. Upon completion, you will see the list of bank accounts on the page. You can interact with them by requesting their details, balances and transactions from Teller.
+1. Start a back-end with `make run …` as shown above.  
+2. Open [http://localhost:8001](http://localhost:8001) in your browser.  
+3. Click **Connect** (top right) to enroll a user with Teller Connect.  
+4. After connecting, you’ll see a list of accounts.  
+   - Use the buttons to fetch **Details**, **Balances**, and **Transactions**.  
+   - For checking accounts, you can also manage **Payees** and create **Payments**.  
+5. At the bottom bar, you’ll see the enrolled **User ID** and the **Access Token** being used for API calls.  
 
-The *User* specified on the right-hand side is the Teller identifier associated to the user whose accounts were enrolled. The *Access Token* authorizes your Teller application to access the user's account data. For more information you can read our online [documentation](https://teller.io/docs).
+---
+
+## Sandbox Credentials
+
+To enroll an account use the username `username` and the password `password`.
+
+See the [Sandbox Guide](https://teller.io/docs/guides/sandbox) to learn about the other types of sandbox credential for triggering flows like OTP and knowledge-based MFA.

@@ -207,3 +207,47 @@ tags
 !.vscode/launch.json
 !.vscode/extensions.json
 *.code-workspace
+
+# Python (python)
+python/.venv/
+python/__pycache__/
+python/**/*.pyc
+python/**/*.pyo
+python/**/*.pyd
+
+# Node (node)
+node/node_modules/
+
+# Ruby (ruby)
+ruby/.bundle/
+ruby/vendor/bundle/
+
+# Go (go)
+# (we run via `go run`; ignore any ad-hoc build outputs if created)
+go/bin/
+
+# Elixir (elixir)
+elixir/_build/
+elixir/deps/
+elixir/.elixir_ls/
+
+# PHP (php)
+# (no composer here, but ignore if someone runs it locally)
+php/vendor/
+php/composer.phar
+# keep composer.lock if you choose to commit it; otherwise uncomment:
+# php/composer.lock
+
+# .NET / C# (dotnet)
+dotnet/bin/
+dotnet/obj/
+dotnet/**/bin/
+dotnet/**/obj/
+
+# Java / Maven (java)
+java/target/
+
+# Shared/editor stuff anywhere under 
+**/.DS_Store
+**/.idea/
+**/.vscode/
