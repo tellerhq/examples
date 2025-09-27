@@ -431,7 +431,18 @@ document.addEventListener('DOMContentLoaded', function(){
 
   let lastHeight = Math.max(consoleContainer.offsetHeight, resizer.offsetHeight + 1);
   let isResizing = false;
+  // Change cursor on hover
+  resizer.addEventListener('mouseenter', () => {
+    if (!isResizing) {
+      resizer.style.cursor = 'ns-resize';
+    }
+  });
 
+  resizer.addEventListener('mouseleave', () => {
+    if (!isResizing) {
+      resizer.style.cursor = '';
+    }
+  });
   // Drag to resize (container grows/shrinks; log shown when height > bar)
   resizer.addEventListener('mousedown', () => {
     isResizing = true;
