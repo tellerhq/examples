@@ -10,7 +10,7 @@ for proxying requests to Teller’s API.
 Run the Python back-end (default):
 
 ```sh
-make run APP_ID=app_xxx
+make APP_ID=app_xxx
 ```
 
 Visit [http://localhost:8001](http://localhost:8001).
@@ -60,3 +60,9 @@ make run java APP_ID=app_xxx ENV=development CERT=cert.pem CERT_KEY=key.pem
 5. At the bottom bar, you’ll see the enrolled **User ID** and the **Access Token** being used for API calls.  
 
 ---
+
+## Sandbox Credentials
+
+To enroll an account use the username `username` and the password `password`.
+
+See the [Sandbox Guide](https://teller.io/docs/guides/sandbox) to learn about the other types of sandbox credential for triggering flows like OTP and knowledge-based MFA.
