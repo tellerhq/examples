@@ -38,6 +38,10 @@ class Client {
 
   async request(method, url, body = null, extraHeaders = {}) {
     const finalUrl = this.normalizeUrl(url);
+
+    // Outgoing
+    consoleLogWire({ direction: 'out', method, url: finalUrl, payload: body });
+
     const res = await fetch(finalUrl, {
       method,
       headers: {
@@ -47,12 +51,15 @@ class Client {
       },
       body: body ? JSON.stringify(body) : null,
     });
-    if (!res.ok) {
-      let msg;
-      try { msg = await res.json(); } catch { msg = await res.text(); }
-      throw new Error(`${method} ${finalUrl} -> ${res.status}: ${JSON.stringify(msg)}`);
-    }
-    return res.json();
+
+    let data;
+    try { data = await res.json(); } catch { data = await res.text(); }
+
+    // Incoming
+    consoleLogWire({ direction: 'in', method, url: finalUrl, status: res.status, payload: data });
+
+    if (!res.ok) throw new Error(`${method} ${finalUrl} -> ${res.status}: ${JSON.stringify(data)}`);
+    return data;
   }
 
   listAccounts() { return this.request('GET', '/accounts'); }
@@ -66,7 +73,16 @@ class Client {
 }
 
 /* ---------------- Templates ---------------- */
-class LogTemplate { constructor(t) { this.t = t; } render(r) { const n = this.t.content.cloneNode(true); n.querySelector('.resource').textContent = r.name; n.querySelector('.timestamp').textContent = new Date().toLocaleString(); n.querySelector('.http').textContent = `${r.method} ${r.path}`; return n; } }
+class LogTemplate {
+  constructor(t) { this.t = t; }
+  render(r) {
+    const n = this.t.content.cloneNode(true);
+    n.querySelector('.resource').textContent = r.name;
+    n.querySelector('.timestamp').textContent = new Date().toLocaleString();
+    n.querySelector('.http').textContent = `${r.method} ${r.path}`;
+    return n;
+  }
+}
 class AccountTemplate {
   constructor(t) { this.t = t; }
   render(account, cb) {
@@ -105,7 +121,18 @@ class PaymentModalTemplate { constructor(t) { this.t = t; } render(memo, amt) { 
 class PaymentTemplate { constructor(t) { this.t = t; } render(payment, payee) { const n = this.t.content.cloneNode(true); n.querySelector('.name').textContent = payee.name; n.querySelector('.amount').textContent = `${payment.amount}$`; return n; } }
 
 /* ---------------- Spinner ---------------- */
-class Spinner { constructor(p){ this.parent=p; this.node=document.createElement('div'); this.node.classList.add('spinner'); } show(){ this.parent.prepend(this.node);} hide(){if(this.node.parentNode) this.parent.removeChild(this.node);} }
+class Spinner {
+  constructor(p){ this.parent=p; this.node=document.createElement('div'); this.node.classList.add('spinner'); }
+  show() {
+      // clear existing contents
+      while (this.parent.firstChild) {
+        this.parent.removeChild(this.parent.firstChild);
+      }
+      // then show spinner
+      this.parent.appendChild(this.node);
+    } 
+    hide(){ if(this.node.parentNode) this.parent.removeChild(this.node); }
+}
 
 /* ---------------- Handlers ---------------- */
 class EnrollmentHandler {
@@ -122,7 +149,7 @@ class EnrollmentHandler {
     const s = new Spinner(c);
     s.show();
     this.client.listAccounts()
-      .then(accs => { accs.forEach(a => c.appendChild(t.render(a,this))); })
+      .then(accs => { accs.forEach(a => c.appendChild(t.render(a, this))); })
       .finally(() => s.hide());
   }
 
@@ -134,7 +161,7 @@ class EnrollmentHandler {
     this.client.getDetails(account)
       .then(d => {
         c.prepend(t.render(d));
-        c.prepend(this.templates.log.render({method:'GET',name:'Details',path:`/accounts/${account.id}/details`}));
+        c.prepend(this.templates.log.render({ method:'GET', name:'Details', path:`/accounts/${account.id}/details` }));
       })
       .finally(() => s.hide());
   }
@@ -147,7 +174,7 @@ class EnrollmentHandler {
     this.client.getBalances(account)
       .then(b => {
         c.prepend(t.render(b));
-        c.prepend(this.templates.log.render({method:'GET',name:'Balances',path:`/accounts/${account.id}/balances`}));
+        c.prepend(this.templates.log.render({ method:'GET', name:'Balances', path:`/accounts/${account.id}/balances` }));
       })
       .finally(() => s.hide());
   }
@@ -160,7 +187,7 @@ class EnrollmentHandler {
     this.client.getTransactions(account)
       .then(txs => {
         txs.reverse().forEach(tx => c.prepend(t.render(tx)));
-        c.prepend(this.templates.log.render({method:'GET',name:'Transactions',path:`/accounts/${account.id}/transactions`}));
+        c.prepend(this.templates.log.render({ method:'GET', name:'Transactions', path:`/accounts/${account.id}/transactions` }));
       })
       .finally(() => s.hide());
   }
@@ -173,10 +200,10 @@ class EnrollmentHandler {
     this.client.listPayees(account)
       .then(payees => {
         payees.forEach(payee => {
-          const cb = () => this.onCreatePayment(account,payee);
-          c.prepend(t.render(payee,cb));
+          const cb = () => this.onCreatePayment(account, payee);
+          c.prepend(t.render(payee, cb));
         });
-        c.prepend(this.templates.log.render({method:'GET',name:'Payees',path:`/accounts/${account.id}/payees`}));
+        c.prepend(this.templates.log.render({ method:'GET', name:'Payees', path:`/accounts/${account.id}/payees` }));
       })
       .finally(() => s.hide());
   }
@@ -187,128 +214,272 @@ class EnrollmentHandler {
     const mt = this.templates.payeeModal;
     const s = new Spinner(c);
     const p = generatePerson();
-    const m = mt.render(p.name,p.email);
+    const m = mt.render(p.name, p.email);
     root.append(m);
 
-    const close=()=>{const el=document.getElementById('payee-modal');if(el)el.remove();};
-    document.getElementById('submit-payee').onclick=()=>{
-      const name=document.getElementById('payee-name').value;
-      const email=document.getElementById('payee-email').value;
+    const close = () => { const el = document.getElementById('payee-modal'); if (el) el.remove(); };
+    document.getElementById('submit-payee').onclick = () => {
+      const name = document.getElementById('payee-name').value;
+      const email = document.getElementById('payee-email').value;
       close();
       s.show();
-      const payee={scheme:'zelle',address:email,name,type:'person'};
-      this.client.createPayee(account,payee)
-        .then(resp=>this.onPayeeResponse(account,payee,resp))
-        .finally(()=>s.hide());
+      const payee = { scheme:'zelle', address:email, name, type:'person' };
+      this.client.createPayee(account, payee)
+        .then(resp => this.onPayeeResponse(account, payee, resp))
+        .finally(() => s.hide());
     };
-    document.getElementById('payee-modal').onclick=()=>close();
-    document.getElementById('payee-modal-content').onclick=e=>e.stopPropagation();
+    document.getElementById('payee-modal').onclick = () => close();
+    document.getElementById('payee-modal-content').onclick = e => e.stopPropagation();
   }
 
-  onCreatePayment(account,payee) {
+  onCreatePayment(account, payee) {
     const c = this.containers.logs;
     const root = this.containers.root;
     const mt = this.templates.paymentModal;
     const s = new Spinner(c);
-    const m = mt.render('Teller test',`${Math.ceil(Math.random()*100)}.00`);
+    const m = mt.render('Teller test', `${Math.ceil(Math.random() * 100)}.00`);
     root.append(m);
 
-    const close=()=>{const el=document.getElementById('payment-modal');if(el)el.remove();};
-    document.getElementById('submit-payment').onclick=()=>{
-      const memo=document.getElementById('payment-memo').value;
-      const amount=document.getElementById('payment-amount').value;
+    const close = () => { const el = document.getElementById('payment-modal'); if (el) el.remove(); };
+    document.getElementById('submit-payment').onclick = () => {
+      const memo = document.getElementById('payment-memo').value;
+      const amount = document.getElementById('payment-amount').value;
       close();
       s.show();
-      const payment={amount,memo,payee:{scheme:'zelle',address:payee.address}};
-      this.client.createPayment(account,payment)
-        .then(resp=>this.onPaymentResponse(account,payee,payment,resp))
-        .finally(()=>s.hide());
+      const payment = { amount, memo, payee: { scheme:'zelle', address: payee.address } };
+      this.client.createPayment(account, payment)
+        .then(resp => this.onPaymentResponse(account, payee, payment, resp))
+        .finally(() => s.hide());
     };
-    document.getElementById('payment-modal').onclick=()=>close();
-    document.getElementById('payment-modal-content').onclick=e=>e.stopPropagation();
+    document.getElementById('payment-modal').onclick = () => close();
+    document.getElementById('payment-modal-content').onclick = e => e.stopPropagation();
   }
 
-  onPayeeResponse(account,payee,resp) {
+  onPayeeResponse(account, payee, resp) {
     const c = this.containers.logs;
     const t = this.templates.payee;
-    const h = this.templates.log.render({method:'POST',name:'Payees',path:`/accounts/${account.id}/payees`});
-    const cb = () => this.onCreatePayment(account,payee);
+    const h = this.templates.log.render({ method:'POST', name:'Payees', path:`/accounts/${account.id}/payees` });
+    const cb = () => this.onCreatePayment(account, payee);
 
-    if(resp.connect_token){
+    if (resp.connect_token) {
       const s = new Spinner(c); s.show();
       const tc = TellerConnect.setup({
         applicationId: APPLICATION_ID,
         environment: ENVIRONMENT,
         connectToken: resp.connect_token,
-        onSuccess: ()=>{c.prepend(t.render(payee,cb));c.prepend(h);s.hide();},
-        onFailure: ()=>s.hide()
+        onSuccess: () => { c.prepend(t.render(payee, cb)); c.prepend(h); s.hide(); },
+        onFailure: () => s.hide()
       });
       tc.open();
     } else {
-      c.prepend(t.render(payee,cb));
+      c.prepend(t.render(payee, cb));
       c.prepend(h);
     }
   }
 
-  onPaymentResponse(account,payee,payment,resp) {
+  onPaymentResponse(account, payee, payment, resp) {
     const c = this.containers.logs;
     const t = this.templates.payment;
-    const h = this.templates.log.render({method:'POST',name:'Payments',path:`/accounts/${account.id}/payments`});
+    const h = this.templates.log.render({ method:'POST', name:'Payments', path:`/accounts/${account.id}/payments` });
 
-    if(resp.connect_token){
+    if (resp.connect_token) {
       const s = new Spinner(c); s.show();
       const tc = TellerConnect.setup({
         applicationId: APPLICATION_ID,
         environment: ENVIRONMENT,
         connectToken: resp.connect_token,
-        onSuccess: ()=>{c.prepend(t.render(payment,payee));c.prepend(h);s.hide();},
-        onFailure: ()=>s.hide()
+        onSuccess: () => { c.prepend(t.render(payment, payee)); c.prepend(h); s.hide(); },
+        onFailure: () => s.hide()
       });
       tc.open();
     } else {
-      c.prepend(t.render(payment,payee));
+      c.prepend(t.render(payment, payee));
       c.prepend(h);
     }
   }
 
-  clear(){Object.values(this.containers).forEach(p=>{while(p.firstChild)p.removeChild(p.firstChild);});}
+  clear() {
+    Object.values(this.containers).forEach(p => { while (p.firstChild) p.removeChild(p.firstChild); });
+  }
 }
 
 /* ---------------- User + Status ---------------- */
-class UserHandler { constructor(l){this.labels=l;} onEnrollment(e){this.labels.userId.textContent=e.user.id;this.labels.accessToken.textContent=e.accessToken;} clear(){Object.values(this.labels).forEach(n=>n.textContent='not_available');} }
-class StatusHandler { constructor(b){this.connected=false;this.button=b;} onEnrollment(){this.setConnected(true);this.button.textContent='Disconnect';} toggle(cb){if(this.connected){this.setConnected(false);this.button.textContent='Connect';cb.onDisconnect();}else{cb.onConnect();}} setConnected(c){this.connected=c;} }
+class UserHandler {
+  constructor(l) { this.labels = l; }
+  onEnrollment(e) { this.labels.userId.textContent = e.user.id; this.labels.accessToken.textContent = e.accessToken; }
+  clear() { Object.values(this.labels).forEach(n => n.textContent = 'not_available'); }
+}
+class StatusHandler {
+  constructor(b) { this.connected = false; this.button = b; }
+  onEnrollment() { this.setConnected(true); this.button.textContent = 'Disconnect'; }
+  toggle(cb) {
+    if (this.connected) { this.setConnected(false); this.button.textContent = 'Connect'; cb.onDisconnect(); }
+    else { cb.onConnect(); }
+  }
+  setConnected(c) { this.connected = c; }
+}
 
 /* ---------------- Utilities ---------------- */
-function generatePerson(){const pick=a=>a[Math.floor(Math.random()*a.length)];const fn=pick(['William','James','Evelyn','Harper','Mason','Ella','Jackson','Avery','Scarlett','Jack']);const ml=pick('ABCDEFGHIJKLMNOPQRSTUVWXYZ');const ln=pick(['Adams','Wilson','Burton','Harris','Stevens','Robinson','Lewis','Walker','Payne','Baker']);const user=(Math.random()+1).toString(36).substring(2);return{name:`${fn} ${ml}. ${ln}`,email:`${user}@teller.io`};}
+function generatePerson(){
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const fn=pick(['William','James','Evelyn','Harper','Mason','Ella','Jackson','Avery','Scarlett','Jack']);
+  const ml=pick('ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+  const ln=pick(['Adams','Wilson','Burton','Harris','Stevens','Robinson','Lewis','Walker','Payne','Baker']);
+  const user=(Math.random()+1).toString(36).substring(2);
+  return {name:`${fn} ${ml}. ${ln}`, email:`${user}@teller.io`};
+}
+
+function consoleLogWire({ direction, method, url, status, payload }) {
+  const consoleEl = document.getElementById('console-log');
+  if (!consoleEl) return;
+
+  const entry = document.createElement('div');
+  const ts = new Date().toLocaleTimeString();
+
+  // stringify only if payload is truthy and non-empty
+  let json = '';
+  if (payload && !(typeof payload === 'object' && Object.keys(payload).length === 0)) {
+    try { json = JSON.stringify(payload, null, 2); } catch { json = String(payload); }
+  }
+
+  entry.innerHTML = `
+    <div class="mb-1">
+      <span class="text-gray-500">${ts}</span>
+      ${direction === 'out' ? '➡️' : '⬅️'} ${method} ${url}${status ? ' (' + status + ')' : ''}
+    </div>
+    ${json ? `<pre><code class="json hljs">${json}</code></pre>` : ''}
+  `;
+
+  consoleEl.appendChild(entry);
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+
+  entry.querySelectorAll('code').forEach(block => {
+    if (window.hljs) window.hljs.highlightElement(block);
+  });
+}
 
 /* ---------------- Bootstrap ---------------- */
-document.addEventListener('DOMContentLoaded',function(){
-  const containers={accounts:document.getElementById('accounts'),logs:document.getElementById('logs'),root:document.body};
-  const templates={
-    log:new LogTemplate(document.getElementById('log-template')),
-    account:new AccountTemplate(document.getElementById('account-template')),
-    detail:new DetailTemplate(document.getElementById('detail-template')),
-    balance:new BalanceTemplate(document.getElementById('balance-template')),
-    transaction:new TransactionTemplate(document.getElementById('transaction-template')),
-    payee:new PayeeTemplate(document.getElementById('payee-template')),
-    payment:new PaymentTemplate(document.getElementById('payment-template')),
-    payeeModal:new PayeeModalTemplate(document.getElementById('payee-modal-template')),
-    paymentModal:new PaymentModalTemplate(document.getElementById('payment-modal-template'))
+document.addEventListener('DOMContentLoaded', function(){
+  const containers = {
+    accounts: document.getElementById('accounts'),
+    logs: document.getElementById('logs'),
+    root: document.body
   };
-  const labels={userId:document.getElementById('user-id'),accessToken:document.getElementById('access-token')};
-  const store=new TellerStore(),client=new Client(),enrollmentHandler=new EnrollmentHandler(client,containers,templates),userHandler=new UserHandler(labels),statusHandler=new StatusHandler(document.getElementById('teller-connect'));
+  const templates = {
+    log: new LogTemplate(document.getElementById('log-template')),
+    account: new AccountTemplate(document.getElementById('account-template')),
+    detail: new DetailTemplate(document.getElementById('detail-template')),
+    balance: new BalanceTemplate(document.getElementById('balance-template')),
+    transaction: new TransactionTemplate(document.getElementById('transaction-template')),
+    payee: new PayeeTemplate(document.getElementById('payee-template')),
+    payment: new PaymentTemplate(document.getElementById('payment-template')),
+    payeeModal: new PayeeModalTemplate(document.getElementById('payee-modal-template')),
+    paymentModal: new PaymentModalTemplate(document.getElementById('payment-modal-template'))
+  };
+  const labels = { userId: document.getElementById('user-id'), accessToken: document.getElementById('access-token') };
+  const store = new TellerStore();
+  const client = new Client();
+  const enrollmentHandler = new EnrollmentHandler(client, containers, templates);
+  const userHandler = new UserHandler(labels);
+  const statusHandler = new StatusHandler(document.getElementById('teller-connect'));
 
-  const tc=TellerConnect.setup({
-    applicationId:APPLICATION_ID,
-    environment:ENVIRONMENT,
-    selectAccount:'multiple',
-    onSuccess:e=>{store.putUser(e.user);store.putEnrollment(e);enrollmentHandler.onEnrollment(e);userHandler.onEnrollment(e);statusHandler.onEnrollment(e);}
+  const tc = TellerConnect.setup({
+    applicationId: APPLICATION_ID,
+    environment: ENVIRONMENT,
+    selectAccount: 'multiple',
+    onSuccess: e => {
+      store.putUser(e.user);
+      store.putEnrollment(e);
+      enrollmentHandler.onEnrollment(e);
+      userHandler.onEnrollment(e);
+      statusHandler.onEnrollment(e);
+    }
   });
 
-  document.getElementById('teller-connect').onclick=()=>statusHandler.toggle({
-    onConnect:()=>tc.open(),
-    onDisconnect:()=>{enrollmentHandler.clear();userHandler.clear();store.clear();location.reload();}
+  document.getElementById('teller-connect').onclick = () => statusHandler.toggle({
+    onConnect: () => tc.open(),
+    onDisconnect: () => { enrollmentHandler.clear(); userHandler.clear(); store.clear(); location.reload(); }
   });
 
-  const e=store.getEnrollment();if(e){enrollmentHandler.onEnrollment(e);userHandler.onEnrollment(e);statusHandler.onEnrollment(e);}
+  const e = store.getEnrollment();
+  if (e) { enrollmentHandler.onEnrollment(e); userHandler.onEnrollment(e); statusHandler.onEnrollment(e); }
+
+  /* ---------- Console Drawer: persistent resizer, minimize (log-only), restore, clear hotkey ---------- */
+  const consoleContainer = document.getElementById('console-container');
+  const resizer = document.getElementById('console-resizer');
+  const consoleLog = document.getElementById('console-log');
+  const statusbar = document.getElementById('statusbar');
+
+  // Optional: keep layout paddings in sync if your CSS uses --console-h / --footer-h
+  const root = document.documentElement;
+  function setFooterVar() {
+    const h = statusbar ? statusbar.getBoundingClientRect().height : 0;
+    root.style.setProperty('--footer-h', `${Math.ceil(h)}px`);
+  }
+  function setConsoleVar() {
+    const h = consoleContainer ? consoleContainer.getBoundingClientRect().height : 0;
+    root.style.setProperty('--console-h', `${Math.ceil(h)}px`);
+  }
+  setFooterVar(); setConsoleVar();
+  window.addEventListener('resize', () => { setFooterVar(); setConsoleVar(); });
+
+  let lastHeight = Math.max(consoleContainer.offsetHeight, resizer.offsetHeight + 1);
+  let isResizing = false;
+
+  // Drag to resize (container grows/shrinks; log shown when height > bar)
+  resizer.addEventListener('mousedown', () => {
+    isResizing = true;
+    document.body.style.userSelect = 'none';
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+    const newHeight = window.innerHeight - e.clientY;
+    const minH = resizer.offsetHeight; // keep bar visible
+    if (newHeight >= 0 && newHeight < window.innerHeight - 100) {
+      const h = Math.max(minH, newHeight);
+      consoleContainer.style.height = `${h}px`;
+      if (h > minH) {
+        consoleLog.style.display = 'block';
+        lastHeight = h;
+        consoleContainer.dataset.minimized = 'false';
+      }
+      setConsoleVar();
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isResizing) {
+      isResizing = false;
+      document.body.style.userSelect = '';
+    }
+  });
+
+  // Double-click toggle: collapse log only, container to bar height; restore to lastHeight
+  resizer.addEventListener('dblclick', () => {
+    const barH = resizer.offsetHeight || 8;
+    if (consoleContainer.dataset.minimized === 'true') {
+      // restore
+      consoleContainer.style.height = `${Math.max(lastHeight, barH + 100) - 32}px`;
+      consoleLog.style.display = 'block';
+      consoleContainer.dataset.minimized = 'false';
+    } else {
+      // minimize to bar only
+      lastHeight = consoleContainer.offsetHeight || lastHeight || 200;
+      consoleLog.style.display = 'none';
+      consoleContainer.style.height = `${barH + 32}px`;
+      consoleContainer.dataset.minimized = 'true';
+    }
+    setConsoleVar();
+  });
+
+  // Cmd+K (Mac) / Ctrl+K clear console
+  window.addEventListener('keydown', (e) => {
+    const isMac = navigator.platform.toUpperCase().includes('MAC');
+    const metaKey = isMac ? e.metaKey : e.ctrlKey;
+    if (metaKey && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      consoleLog.innerHTML = '';
+    }
+  });
 });

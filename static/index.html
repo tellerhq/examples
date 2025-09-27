@@ -16,49 +16,37 @@
   <link href="https://unpkg.com/tailwindcss@2.2.15/dist/tailwind.min.css" rel="stylesheet">
   <link href="https://unpkg.com/@tailwindcss/forms@0.3.3/dist/forms.min.css" rel="stylesheet">
 
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+
   <!-- Empty favicon to prevent failing requests to /favicon.ico -->
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgo=">
 
   <title>Teller Demo</title>
 </head>
 
-<body class="h-screen">
-  <nav class="bg-white shadow">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between h-16">
-        <div class="flex">
-          <div class="flex-shrink-0 flex items-center">
-            <img class="h-10" src="https://cdn.teller.io/web/images/logo-7fcc37ce2fdf274cfa679546f5d738d4.svg" />
-          </div>
-        </div>
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <button type="button" id="teller-connect"
-              class="relative inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-              Connect
-            </button>
-          </div>
-        </div>
-      </div>
+<body class="flex flex-col h-screen overflow-hidden">
+  <!-- Top nav -->
+  <nav class="bg-white shadow h-16 flex-shrink-0">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex justify-between items-center">
+      <img class="h-10" src="https://cdn.teller.io/web/images/logo-7fcc37ce2fdf274cfa679546f5d738d4.svg" />
+      <button type="button" id="teller-connect"
+        class="px-4 py-2 rounded-md text-white bg-blue-600 shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+        Connect
+      </button>
     </div>
   </nav>
 
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-20">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div id="accounts"></div>
-      <div id="logs"></div>
-    </div>
-  </div>
-
-  <div class="fixed bottom-0 w-full">
-    <div class="rounded-t-lg max-w-7xl mx-auto p-8 bg-gray-200">
-      <div class="flex flex-row justify-around items-center">
-        <div>
-          User – <span id="user-id" class="font-mono">not_available</span>
-        </div>
-        <div>
-          Access Token – <span id="access-token" class="font-mono">not_available</span>
-        </div>
+  <!-- Main two-column app area (fills remaining height, bottom-padded to avoid fixed console+footer overlap) -->
+  <div id="app-shell" class="flex-1 overflow-hidden"
+    style="padding-bottom: var(--console-h, 200px);">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
+      <div class="h-full flex gap-4 overflow-hidden">
+        <!-- Left column: accounts (only scrolls if it overflows) -->
+        <div id="accounts" class="w-1/3 min-w-[260px] h-full overflow-y-auto p-4 border-r"></div>
+        <!-- Right column: transactions/logs list; this is the one that typically scrolls -->
+        <div id="logs" class="flex-1 h-full overflow-y-auto p-4"></div>
       </div>
     </div>
   </div>
@@ -291,6 +279,30 @@
       </div>
     </div>
   </template>
+
+  <!-- Resizable console drawer (fixed above footer) -->
+  <div id="console-container" class="fixed left-0 w-full border-t border-gray-600 flex flex-col"
+    style="height:300px; bottom:0px;">
+    <!-- This strip is *always visible* -->
+    <div id="console-resizer" class="h-2 bg-gray-700 cursor-ns-resize"></div>
+    <!-- This part can collapse -->
+    <div id="console-log" class="flex-1 overflow-y-auto bg-black text-green-400 font-mono text-xs p-2"></div>
+  </div>
+
+  <!-- Fixed status bar footer -->
+    <div id="statusbar" class="fixed bottom-0 w-full">
+      <div class="mx-auto py-1 bg-gray-200">
+        <div class="flex flex-row justify-around items-center">
+          <div>
+            User – <span id="user-id" class="font-mono">not_available</span>
+          </div>
+          <div>
+            Access Token – <span id="access-token" class="font-mono">not_available</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
 
   <script src="https://cdn.teller.io/connect/connect.js"></script>
   <script src="/static/index.js"></script>
