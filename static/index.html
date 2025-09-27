@@ -39,17 +39,14 @@
   </nav>
 
   <!-- Main two-column app area (fills remaining height, bottom-padded to avoid fixed console+footer overlap) -->
-  <div id="app-shell" class="flex-1 overflow-hidden"
-    style="padding-bottom: var(--console-h, 200px);">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
-      <div class="h-full flex gap-4 overflow-hidden">
-        <!-- Left column: accounts (only scrolls if it overflows) -->
-        <div id="accounts" class="w-1/3 min-w-[260px] h-full overflow-y-auto p-4 border-r"></div>
-        <!-- Right column: transactions/logs list; this is the one that typically scrolls -->
-        <div id="logs" class="flex-1 h-full overflow-y-auto p-4"></div>
-      </div>
+<div id="app-shell" class="flex-1 overflow-hidden h-screen">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
+    <div class="h-full flex gap-4 overflow-hidden">
+      <div id="accounts" class="w-1/3 min-w-[260px] h-full overflow-y-auto p-4 border-r"></div>
+      <div id="logs" class="flex-1 h-full overflow-y-auto p-4"></div>
     </div>
   </div>
+</div>
 
   <!-- Payee modal -->
   <template id="payee-modal-template">
@@ -281,7 +278,7 @@
   </template>
 
   <!-- Resizable console drawer (fixed above footer) -->
-  <div id="console-container" class="fixed left-0 w-full border-t border-gray-600 flex flex-col"
+  <div id="console-container" class="border-t border-gray-600 flex flex-col h-48 hidden"
     style="height:300px; bottom:0px;">
     <!-- This strip is *always visible* -->
     <div id="console-resizer" class="h-2 bg-gray-700 cursor-ns-resize"></div>

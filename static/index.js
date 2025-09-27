@@ -388,6 +388,7 @@ document.addEventListener('DOMContentLoaded', function(){
     environment: ENVIRONMENT,
     selectAccount: 'multiple',
     onSuccess: e => {
+      document.getElementById('console-container').classList.remove('hidden');
       store.putUser(e.user);
       store.putEnrollment(e);
       enrollmentHandler.onEnrollment(e);
@@ -402,7 +403,12 @@ document.addEventListener('DOMContentLoaded', function(){
   });
 
   const e = store.getEnrollment();
-  if (e) { enrollmentHandler.onEnrollment(e); userHandler.onEnrollment(e); statusHandler.onEnrollment(e); }
+  if (e) {
+    document.getElementById('console-container').classList.remove('hidden');
+    enrollmentHandler.onEnrollment(e);
+    userHandler.onEnrollment(e);
+    statusHandler.onEnrollment(e);
+  }
 
   /* ---------- Console Drawer: persistent resizer, minimize (log-only), restore, clear hotkey ---------- */
   const consoleContainer = document.getElementById('console-container');
