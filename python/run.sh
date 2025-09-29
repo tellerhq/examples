@@ -6,7 +6,7 @@ if ! command -v python3 >/dev/null 2>&1; then
   echo "ERROR: Python 3 is not installed."
   echo "Attempting to install..."
   if command -v apt-get >/dev/null 2>&1; then
-    sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-pip
+    sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-pip python3-distutils
   elif command -v brew >/dev/null 2>&1; then
     brew install python@3.11
   else
@@ -18,7 +18,23 @@ fi
 # Ensure pip is available
 if ! python3 -m pip --version >/dev/null 2>&1; then
   echo "Bootstrapping pip..."
-  python3 -m ensurepip --upgrade
+  if python3 -m ensurepip --upgrade >/dev/null 2>&1; then
+    echo "ensurepip succeeded."
+  else
+    echo "ensurepip not available, falling back to get-pip.py..."
+    if ! command -v curl >/dev/null 2>&1; then
+      echo "Installing curl..."
+      if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get update && sudo apt-get install -y curl
+      elif command -v brew >/dev/null 2>&1; then
+        brew install curl
+      else
+        echo "Could not auto-install curl. Please install manually."
+        exit 1
+      fi
+    fi
+    curl -sS https://bootstrap.pypa.io/get-pip.py | python3
+  fi
 fi
 
 # Ensure venv is available
