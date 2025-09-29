@@ -251,3 +251,6 @@ java/target/
 **/.DS_Store
 **/.idea/
 **/.vscode/
+
+go/go.mod
+go/go.sum

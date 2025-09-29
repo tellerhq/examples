@@ -21,4 +21,4 @@ if [ ! -d node_modules ]; then
 fi
 
 # Run the app
-exec npm start -- "$@"
+exec node teller.js "$@"
