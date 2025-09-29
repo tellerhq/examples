@@ -20,8 +20,11 @@ if ! command -v bundle >/dev/null 2>&1; then
   gem install bundler --no-document
 fi
 
-# --- install project deps locally into vendor/bundle ---
-bundle install --path vendor/bundle --quiet
+# --- configure Bundler install path once ---
+bundle config set --local path 'vendor/bundle'
+
+# --- install project deps ---
+bundle install --quiet
 
 # --- run the app with locked deps ---
 exec bundle exec ruby teller.rb "$@"

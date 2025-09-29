@@ -2,7 +2,7 @@ GEM
   remote: https://rubygems.org/
   specs:
     base64 (0.3.0)
-    multi_json (1.15.0)
+    multi_json (1.17.0)
     mustermann (3.0.4)
       ruby2_keywords (~> 0.0.1)
     rack (2.2.18)
@@ -25,6 +25,7 @@ GEM
     webrick (1.9.1)
 
 PLATFORMS
+  arm64-darwin-25
   ruby
 
 DEPENDENCIES
@@ -33,4 +34,4 @@ DEPENDENCIES
   webrick
 
 BUNDLED WITH
-   1.17.2
+   2.7.2
